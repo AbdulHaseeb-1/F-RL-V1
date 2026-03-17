@@ -12,10 +12,12 @@ logger = logging.getLogger(__name__)
 
 def run_episode(model: PPO, env: BTCTradingEnv) -> dict:
     """Run single episode deterministically. Returns metrics dict."""
-    obs, _ = env.reset()
-    env.start_idx = 0  # evaluate from beginning
+    env.reset()
+    # Override to evaluate from beginning of full dataset
+    env.start_idx = 0
     env.step_idx = 0
     env.end_idx = len(env.prices) - 1
+    obs = env._obs()  # refresh observation for index 0
 
     capitals = [env.initial_capital]
     positions = []

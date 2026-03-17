@@ -62,7 +62,8 @@ def generate_splits(df: pd.DataFrame, train_months: int = 12,
 
 def train_fold(df: pd.DataFrame, split: WalkForwardSplit,
                feature_cols: List[str], cfg: dict) -> XGBClassifier:
-    train = df.loc[split.train_start:split.train_end]
+    # Exclusive end: avoid overlap with OOS start row
+    train = df.loc[split.train_start:split.train_end].iloc[:-1]
     labels = make_labels(train, forward_candles=cfg["label"]["forward_candles"],
                          threshold_pct=cfg["label"]["threshold_pct"],
                          use_atr=cfg["label"].get("use_atr_threshold", False))

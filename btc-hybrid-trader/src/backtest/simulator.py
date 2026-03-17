@@ -67,7 +67,7 @@ class TradeSimulator:
             if position != 0 and (new_sig != position or new_sig == 0):
                 exit_price = price * (1 - self.slippage * position)  # slip on exit
                 pnl_pct = (exit_price - entry_price) / entry_price * position
-                fee = self.fee_taker * size
+                fee = self.fee_taker  # flat rate, size already in trade_pnl
                 net_pct = pnl_pct - fee
                 trade_pnl = entry_capital * size * net_pct
                 capital += trade_pnl

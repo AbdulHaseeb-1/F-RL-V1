@@ -32,9 +32,11 @@ def profit_factor(returns: pd.Series) -> float:
 def compute_all(trade_returns: pd.Series, equity: pd.Series) -> dict:
     wins = trade_returns[trade_returns > 0]
     losses = trade_returns[trade_returns <= 0]
+    # Use per-candle equity returns for Sharpe/Sortino (not per-trade returns)
+    equity_returns = equity.pct_change().dropna()
     return {
-        "sharpe": sharpe(trade_returns),
-        "sortino": sortino(trade_returns),
+        "sharpe": sharpe(equity_returns),
+        "sortino": sortino(equity_returns),
         "max_drawdown": max_drawdown(equity),
         "profit_factor": profit_factor(trade_returns),
         "win_rate": len(wins) / (len(trade_returns) + 1e-9),

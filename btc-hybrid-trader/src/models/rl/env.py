@@ -121,16 +121,16 @@ class BTCTradingEnv(gym.Env):
             new_size = action_size * np.sign(new_dir)
 
         reward = 0.0
-        position_change = abs(new_size - self.position)
-        fee_cost = self.fee_rate * position_change
-        slippage_cost = self.slippage_rate * position_change
 
         # Close existing position if direction changes or flattening
         if self.position_dir != 0 and (new_dir != self.position_dir or new_dir == 0):
-            pnl = self._unrealized_pnl_pct() * abs(self.position)
+            close_size = abs(self.position)
+            close_fee = self.fee_rate * close_size
+            close_slip = self.slippage_rate * close_size
+            pnl = self._unrealized_pnl_pct() * close_size
             self.capital *= (1 + pnl)
-            self.capital -= fee_cost * self.initial_capital
-            self.capital -= slippage_cost * self.initial_capital
+            self.capital -= close_fee * self.capital
+            self.capital -= close_slip * self.capital
             self.trade_history.append(pnl)
             self.position = 0.0
             self.position_dir = 0
@@ -139,10 +139,12 @@ class BTCTradingEnv(gym.Env):
 
         # Open new position
         if new_dir != 0 and self.position_dir == 0:
+            open_size = abs(new_size)
+            open_fee = self.fee_rate * open_size
             self.position = new_size
             self.position_dir = new_dir
             self.entry_price = cur_price * (1 + self.slippage_rate * new_dir)
-            self.capital -= fee_cost * self.initial_capital
+            self.capital -= open_fee * self.capital
 
         # Funding rate cost (every funding_interval candles)
         if self.position_dir != 0 and (self.step_idx % self.funding_interval == 0):
@@ -161,7 +163,6 @@ class BTCTradingEnv(gym.Env):
         drawdown = max(0.0, (self.peak_capital - self.capital) / (self.peak_capital + 1e-9))
 
         reward = (unrealized / max(drawdown, 0.01)) \
-                 - (self.fee_rate * position_change) \
                  - (0.5 * max(drawdown - 0.05, 0))
 
         terminated = self.step_idx >= self.end_idx

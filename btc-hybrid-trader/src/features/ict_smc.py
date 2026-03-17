@@ -5,8 +5,9 @@ import pandas as pd
 
 def _swing_highs_lows(df: pd.DataFrame, lookback: int = 20):
     h, l = df["high"], df["low"]
-    swing_high = h == h.rolling(lookback * 2 + 1, center=True).max()
-    swing_low = l == l.rolling(lookback * 2 + 1, center=True).min()
+    # Use backward-only window to avoid lookahead bias
+    swing_high = h == h.rolling(lookback, min_periods=lookback).max()
+    swing_low = l == l.rolling(lookback, min_periods=lookback).min()
     return swing_high, swing_low
 
 
@@ -35,12 +36,13 @@ def add_order_blocks(df: pd.DataFrame, lookback: int = 50) -> pd.DataFrame:
     """Order block: last bullish/bearish candle before a significant move."""
     c, o, h, l = df["close"], df["open"], df["high"], df["low"]
     body = (c - o).abs()
-    move = c.diff(3).abs()
+    move = c.diff(3)  # directional: positive = up, negative = down
+    body_thresh = body.rolling(lookback).mean() * 1.5
 
     # Bullish OB: bearish candle (close < open) before upward move
-    bull_ob = (c.shift(1) < o.shift(1)) & (move > body.rolling(lookback).mean() * 1.5)
+    bull_ob = (c.shift(1) < o.shift(1)) & (move > body_thresh)
     # Bearish OB: bullish candle before downward move
-    bear_ob = (c.shift(1) > o.shift(1)) & (move < -body.rolling(lookback).mean() * 1.5)
+    bear_ob = (c.shift(1) > o.shift(1)) & (move < -body_thresh)
 
     df["ob_bull"] = bull_ob.astype(int)
     df["ob_bear"] = bear_ob.astype(int)

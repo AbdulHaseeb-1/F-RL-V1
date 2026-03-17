@@ -16,8 +16,8 @@ def add_order_flow(df: pd.DataFrame, cvd_window=20, oi_window=10) -> pd.DataFram
     delta = tbv - taker_sell
     df["vol_delta"] = delta
 
-    # CVD: cumulative volume delta
-    df["cvd"] = delta.cumsum()
+    # CVD: rolling cumulative volume delta (windowed for stationarity)
+    df["cvd"] = delta.rolling(cvd_window).sum()
     df["cvd_change"] = df["cvd"].diff(cvd_window)
 
     # CVD divergence: price goes up but CVD goes down (or vice versa)
