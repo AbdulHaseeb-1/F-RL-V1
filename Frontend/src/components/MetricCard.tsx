@@ -9,7 +9,7 @@ interface MetricCardProps {
 }
 
 export default function MetricCard({ label, value, suffix = '', trend, small = false }: MetricCardProps) {
-  const formatted = typeof value === 'number'
+  const formatted = typeof value === 'number' && Number.isFinite(value)
     ? (Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(4))
     : value ?? '--'
 

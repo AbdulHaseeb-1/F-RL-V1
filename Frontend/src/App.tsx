@@ -84,6 +84,12 @@ function App() {
   const [actionBusy, setActionBusy] = useState(false)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [clock, setClock] = useState(() => new Date().toLocaleTimeString())
+
+  useEffect(() => {
+    const id = setInterval(() => setClock(new Date().toLocaleTimeString()), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   const healthFetch = useCallback(() => api.health(), [])
   const { data: health } = usePolling(healthFetch, 5000)
@@ -100,7 +106,7 @@ function App() {
   const progressFetch = useCallback(() => api.monitor.progress(), [])
   const { data: progress, refetch: refetchProgress } = usePolling(progressFetch, 2000)
 
-  const historyFetch = useCallback(() => api.pipeline.history(), [])
+  const historyFetch = useCallback(() => api.monitor.metrics('all'), [])
   const { data: history, refetch: refetchHistory } = usePolling(historyFetch, 3000)
 
   const metricsFetch = useCallback(() => api.backtest.metrics(), [])
@@ -244,7 +250,7 @@ function App() {
             </div>
             <div className="flex items-center gap-4">
               <StatusBadge status={backendStatus} />
-              <div className="font-mono text-xs text-gray-500">{new Date().toLocaleTimeString()}</div>
+              <div className="font-mono text-xs text-gray-500">{clock}</div>
             </div>
           </div>
         </div>

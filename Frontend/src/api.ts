@@ -28,7 +28,8 @@ async function request<T = unknown>(path: string, options: RequestOptions = {}):
     throw new Error(`${res.status} ${res.statusText}`)
   }
 
-  return (await res.json()) as T
+  const json = await res.json()
+  return (json.data !== undefined ? json.data : json) as T
 }
 
 export const api = {

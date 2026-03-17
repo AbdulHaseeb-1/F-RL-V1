@@ -99,9 +99,14 @@ func launchPipeline(runName string, cfg map[string]any) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	// Start the process first so cmd.Process is populated before storing it.
+	if err := cmd.Start(); err != nil {
+		store.FinishActive(store.StatusFailed, "failed to start: "+err.Error())
+		return
+	}
 	store.SetProcess(cmd)
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Wait(); err != nil {
 		store.FinishActive(store.StatusFailed, err.Error())
 	} else {
 		store.FinishActive(store.StatusCompleted, "")

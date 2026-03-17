@@ -1,15 +1,15 @@
-import type { GateResult } from '../types'
-
 interface GateResultsProps {
   gates: unknown
 }
 
-function formatGateValue(value: GateResult['value']) {
-  if (typeof value === 'number') {
-    return value.toFixed(4)
-  }
-
-  return value ?? '--'
+interface GateEntry {
+  passed?: boolean
+  stage?: string
+  fold?: number | string
+  status?: string
+  metrics?: Record<string, number | string | null>
+  timestamp?: string
+  [key: string]: unknown
 }
 
 export default function GateResults({ gates }: GateResultsProps) {
@@ -25,25 +25,36 @@ export default function GateResults({ gates }: GateResultsProps) {
       <div className="space-y-2">
         {gateList.map((gate, index) => {
           const passed = Boolean(gate.passed)
+          const metrics = gate.metrics && typeof gate.metrics === 'object' ? gate.metrics : {}
 
           return (
             <div
               key={index}
-              className={`flex items-center justify-between rounded-lg px-3 py-2 ${
+              className={`rounded-lg px-3 py-2 ${
                 passed ? 'border border-emerald-500/20 bg-emerald-500/10' : 'border border-red-500/20 bg-red-500/10'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span className={`text-lg ${passed ? 'text-emerald-400' : 'text-red-400'}`}>{passed ? '✓' : '✗'}</span>
-                <span className="text-sm text-gray-300">
-                  {gate.stage} / {gate.metric}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`text-lg ${passed ? 'text-emerald-400' : 'text-red-400'}`}>{passed ? '✓' : '✗'}</span>
+                  <span className="text-sm font-medium text-gray-300">{gate.stage}</span>
+                  {gate.fold != null && (
+                    <span className="rounded bg-gray-700 px-1.5 py-0.5 text-xs text-gray-400">fold {gate.fold}</span>
+                  )}
+                </div>
+                <span className={`text-xs font-semibold uppercase ${passed ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {gate.status || (passed ? 'passed' : 'failed')}
                 </span>
               </div>
-              <div className="text-right">
-                <span className="font-mono text-sm text-gray-400">
-                  {formatGateValue(gate.value)} {gate.direction} {gate.threshold}
-                </span>
-              </div>
+              {Object.keys(metrics).length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs text-gray-500">
+                  {Object.entries(metrics).map(([k, v]) => (
+                    <span key={k}>
+                      {k}: {typeof v === 'number' && Number.isFinite(v) ? v.toFixed(4) : String(v ?? '--')}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )
         })}
@@ -52,16 +63,16 @@ export default function GateResults({ gates }: GateResultsProps) {
   )
 }
 
-function normalizeGates(input: unknown): GateResult[] {
+function normalizeGates(input: unknown): GateEntry[] {
   const rawGates =
     Array.isArray(input) ? input
-      : input && typeof input === 'object' && 'gates' in input ? input.gates
-      : input && typeof input === 'object' && 'data' in input ? input.data
+      : input && typeof input === 'object' && 'gates' in input ? (input as Record<string, unknown>).gates
+      : input && typeof input === 'object' && 'data' in input ? (input as Record<string, unknown>).data
       : []
 
   if (!Array.isArray(rawGates)) {
     return []
   }
 
-  return rawGates.filter((gate): gate is GateResult => Boolean(gate) && typeof gate === 'object')
+  return rawGates.filter((gate): gate is GateEntry => Boolean(gate) && typeof gate === 'object')
 }

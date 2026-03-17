@@ -25,8 +25,12 @@ func MonitorProgress(w http.ResponseWriter, r *http.Request) {
 	data, err := readTrainingHistory()
 	if err != nil {
 		// Return empty progress when no run data exists yet.
+		runName := ""
+		if run := store.GetActive(); run != nil {
+			runName = run.RunName
+		}
 		response.JSON(w, http.StatusOK, map[string]any{
-			"run_name":           "",
+			"run_name":           runName,
 			"current_stage":      stageFromActive(),
 			"stages":             map[string]any{},
 			"total_entries":      0,
@@ -53,13 +57,13 @@ func MonitorMetrics(w http.ResponseWriter, r *http.Request) {
 
 	data, err := readTrainingHistory()
 	if err != nil {
-		response.JSON(w, http.StatusOK, map[string]any{})
+		response.JSON(w, http.StatusOK, []any{})
 		return
 	}
 
 	rawHistory, _ := data["history"].([]any)
 	if rawHistory == nil {
-		response.JSON(w, http.StatusOK, map[string]any{})
+		response.JSON(w, http.StatusOK, []any{})
 		return
 	}
 
@@ -84,12 +88,18 @@ func MonitorMetrics(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, filtered)
 }
 
+// gateStages are the pipeline stages whose results represent quality gates.
+var gateStages = map[string]bool{
+	"xgb_evaluate": true,
+	"backtest":      true,
+}
+
 // MonitorGates godoc
 // GET /api/monitor/gates
 func MonitorGates(w http.ResponseWriter, r *http.Request) {
 	data, err := readTrainingHistory()
 	if err != nil {
-		response.JSON(w, http.StatusOK, []any{})
+		response.JSON(w, http.StatusOK, []map[string]any{})
 		return
 	}
 
@@ -100,16 +110,20 @@ func MonitorGates(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			continue
 		}
-		status, _ := m["status"].(string)
-		if status == "passed" || status == "failed" {
-			gates = append(gates, map[string]any{
-				"stage":        m["stage"],
-				"fold":         m["fold"],
-				"status":       m["status"],
-				"duration_sec": m["duration_sec"],
-				"timestamp":    m["timestamp"],
-			})
+		stageName, _ := m["stage"].(string)
+		if !gateStages[stageName] {
+			continue
 		}
+		status, _ := m["status"].(string)
+		metrics, _ := m["metrics"].(map[string]any)
+		gates = append(gates, map[string]any{
+			"stage":     stageName,
+			"fold":      m["fold"],
+			"status":    status,
+			"passed":    status == "passed",
+			"metrics":   metrics,
+			"timestamp": m["timestamp"],
+		})
 	}
 	if gates == nil {
 		gates = []map[string]any{}
