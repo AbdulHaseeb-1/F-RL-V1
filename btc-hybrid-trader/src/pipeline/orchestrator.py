@@ -434,10 +434,82 @@ class PipelineOrchestrator:
         if not passed:
             logger.warning("Backtest gate failed: %s", failures)
 
+        # ── Save JSON for Go backend ────────────────────────────────────
+        self._save_backtest_json(result, metrics)
+
         self.state.backtest_done = True
         self.state.stage = "backtest"
         self._save_checkpoint()
         return result
+
+    def _save_backtest_json(self, result: dict, metrics: dict):
+        """Persist backtest results to runs/{run_name}/backtest_results.json
+        so the Go backend can serve them without Parquet dependencies."""
+        import json as _json
+
+        def _ts(v):
+            return v.isoformat() if hasattr(v, "isoformat") else str(v)
+
+        def _scalar(v):
+            if isinstance(v, float) and np.isnan(v):
+                return None
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return str(v)
+
+        # Equity curve: [{ts, value}]
+        equity_json = [
+            {"ts": _ts(ts), "value": float(v)}
+            for ts, v in zip(result["equity"].index, result["equity"].values)
+        ]
+
+        # Trades: list of dicts with string timestamps and enum values
+        trades_json = []
+        trade_df = result.get("trades", pd.DataFrame())
+        if len(trade_df) > 0:
+            for _, row in trade_df.iterrows():
+                d = {}
+                for k, v in row.items():
+                    if hasattr(v, "isoformat"):
+                        d[k] = v.isoformat()
+                    elif isinstance(v, ExitReason):
+                        d[k] = v.value
+                    elif isinstance(v, float) and np.isnan(v):
+                        d[k] = None
+                    else:
+                        d[k] = _scalar(v) if not isinstance(v, str) else v
+                trades_json.append(d)
+
+        # Risk events
+        risk_events_json = []
+        risk_df = result.get("risk_events", pd.DataFrame())
+        if len(risk_df) > 0:
+            for _, row in risk_df.iterrows():
+                d = {}
+                for k, v in row.items():
+                    if hasattr(v, "isoformat"):
+                        d[k] = v.isoformat()
+                    elif isinstance(v, float) and np.isnan(v):
+                        d[k] = None
+                    else:
+                        d[k] = _scalar(v) if not isinstance(v, str) else v
+                risk_events_json.append(d)
+
+        # Metrics: ensure all values are JSON-serializable
+        metrics_json = {}
+        for k, v in metrics.items():
+            metrics_json[k] = _scalar(v) if not isinstance(v, str) else v
+
+        bt_results_path = self.monitor.output_dir / "backtest_results.json"
+        with open(bt_results_path, "w") as f:
+            _json.dump({
+                "equity_curve": equity_json,
+                "trades": trades_json,
+                "metrics": metrics_json,
+                "risk_events": risk_events_json,
+            }, f, indent=2, default=str)
+        logger.info("Backtest results saved → %s", bt_results_path)
 
     def _get_rl_position_sizes(self, aligned: pd.DataFrame) -> Optional[pd.Series]:
         """Run RL model to get position sizes for each timestamp."""
@@ -540,3 +612,47 @@ class PipelineOrchestrator:
             "progress": self.monitor.get_progress(),
             "backtest_result": result,
         }
+
+
+# ──────────────────────────────────────────────────────────────
+# CLI entry point: python -m src.pipeline.orchestrator [args]
+# ──────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import argparse
+    import sys
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)],
+    )
+
+    parser = argparse.ArgumentParser(description="BTC Hybrid Trader Pipeline")
+    parser.add_argument("--run-name", default=None,
+                        help="Name for this run (default: auto-generated)")
+    parser.add_argument("--config", default="configs/pipeline.yaml",
+                        help="Path to pipeline YAML config")
+    parser.add_argument("--data-dir", default="data",
+                        help="Directory containing kline parquet files")
+    parser.add_argument("--model-dir", default="models",
+                        help="Directory for model artifacts")
+    parser.add_argument("--output-dir", default="runs",
+                        help="Directory for run outputs and monitor JSON")
+    parser.add_argument("--no-resume", action="store_true",
+                        help="Ignore any existing checkpoint and start fresh")
+    args = parser.parse_args()
+
+    orc = PipelineOrchestrator(
+        config_path=args.config,
+        data_dir=args.data_dir,
+        model_dir=args.model_dir,
+        output_dir=args.output_dir,
+        run_name=args.run_name,
+    )
+    try:
+        result = orc.run(resume=not args.no_resume)
+        print(f"Pipeline completed: {result['run_name']}")
+        sys.exit(0)
+    except Exception as exc:
+        logger.error("Pipeline failed: %s", exc)
+        sys.exit(1)
