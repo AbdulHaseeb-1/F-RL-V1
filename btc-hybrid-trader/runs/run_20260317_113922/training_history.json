@@ -1,0 +1,37 @@
+{
+  "run_name": "run_20260317_113922",
+  "history": [
+    {
+      "stage": "data_load",
+      "fold": -1,
+      "metrics": {
+        "error": 0
+      },
+      "timestamp": "2026-03-17T11:39:26.768363+00:00",
+      "duration_sec": 2.06,
+      "status": "failed"
+    },
+    {
+      "stage": "data_load",
+      "fold": -1,
+      "metrics": {
+        "error": 0
+      },
+      "timestamp": "2026-03-17T11:39:26.771012+00:00",
+      "duration_sec": 2.06,
+      "status": "failed"
+    }
+  ],
+  "progress": {
+    "run_name": "run_20260317_113922",
+    "stages": {
+      "data_load": {
+        "count": 2,
+        "status": "failed"
+      }
+    },
+    "total_entries": 2,
+    "total_duration_sec": 4.1,
+    "current_stage": "data_load"
+  }
+}

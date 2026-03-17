@@ -1,0 +1,29 @@
+2026-03-17 14:55:36 [INFO] Logging to: D:\Problems\F-RL-V1\logs
+2026-03-17 14:55:36 [INFO] Run log:    D:\Problems\F-RL-V1\logs\run_20260317_145535.log
+
+=== Checking prerequisites ===
+
+2026-03-17 14:55:38 [OK] Go:     go version go1.26.1 windows/amd64
+2026-03-17 14:55:39 [OK] Node:   v22.17.1
+2026-03-17 14:55:39 [OK] Python: Python 3.14.0
+
+=== Setting up Go backend ===
+
+2026-03-17 14:55:43 [WARN] Port 8080 is already in use (Go backend). The service may fail to start.
+2026-03-17 14:55:44 [INFO] Running: go mod tidy
+2026-03-17 14:55:44 [INFO] Starting Go backend on :8080...
+2026-03-17 14:55:46 [OK] Go backend started (PID 23008) - log: D:\Problems\F-RL-V1\logs\backend_20260317_145535.log
+2026-03-17 14:55:46 [INFO] Waiting for backend to be ready...
+2026-03-17 14:55:47 [OK] Backend is ready at http://localhost:8080
+
+=== Setting up React frontend ===
+
+2026-03-17 14:55:48 [INFO] Starting React dev server on :5173...
+2026-03-17 14:55:49 [OK] React frontend started (PID 16380) - log: D:\Problems\F-RL-V1\logs\frontend_20260317_145535.log
+
+=== Services running ===
+
+
+=== Shutting down all services ===
+
+2026-03-17 14:56:47 [INFO] All services stopped. Logs in: D:\Problems\F-RL-V1\logs

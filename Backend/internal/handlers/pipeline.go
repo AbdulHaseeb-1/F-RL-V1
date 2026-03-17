@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/AbdulHaseeb-1/F-RL-V1/backend/internal/store"
@@ -91,9 +93,11 @@ func launchPipeline(runName string, cfg map[string]any) {
 		dir = "../btc-hybrid-trader"
 	}
 
-	cmd := exec.Command("python", "-m", "src.pipeline.orchestrator",
+	cmd := exec.Command(resolvePythonExecutable(dir), "-m", "src.pipeline.orchestrator",
 		"--run-name", runName)
 	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	// Start the process first so cmd.Process is populated before storing it.
 	if err := cmd.Start(); err != nil {
@@ -108,4 +112,19 @@ func launchPipeline(runName string, cfg map[string]any) {
 		store.FinishActive(store.StatusCompleted, "")
 	}
 	store.SetProcess(nil)
+}
+
+func resolvePythonExecutable(dir string) string {
+	candidates := []string{
+		filepath.Join(dir, ".venv", "Scripts", "python.exe"),
+		filepath.Join(dir, ".venv", "bin", "python"),
+	}
+
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+
+	return "python"
 }

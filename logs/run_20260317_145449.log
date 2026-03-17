@@ -1,0 +1,7 @@
+2026-03-17 14:54:49 [INFO] Logging to: D:\Problems\F-RL-V1\logs
+2026-03-17 14:54:50 [INFO] Run log:    D:\Problems\F-RL-V1\logs\run_20260317_145449.log
+
+=== Checking prerequisites ===
+
+2026-03-17 14:54:50 [ERR] Required command not found: go
+2026-03-17 14:54:50 [ERR] See howto.md section 'Prerequisites' for installation instructions.

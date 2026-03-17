@@ -1,8 +1,10 @@
 """Pipeline orchestrator: controls the full training lifecycle from data
    download through XGBoost walk-forward, RL training, to final backtest
    with validation gates, checkpointing, and progress tracking."""
+import argparse
 import logging
 import pickle
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,7 +14,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from ..data.storage import load_klines, load_funding_rates
+from ..data.downloader import download_klines
+from ..data.storage import load_klines
 from ..features.engine import build_features
 from ..models.xgboost.train import (
     get_feature_cols, generate_splits, train_fold, WalkForwardSplit
@@ -145,9 +148,9 @@ class PipelineOrchestrator:
     def stage_data_load(self):
         self.monitor.start_stage("data_load")
         try:
-            self.df_5m = load_klines("5m", self.data_dir)
-            self.df_4h = load_klines("4h", self.data_dir)
-            self.df_1d = load_klines("1d", self.data_dir)
+            self.df_5m = self._load_or_download_klines("5m")
+            self.df_4h = self._load_or_download_klines("4h")
+            self.df_1d = self._load_or_download_klines("1d")
 
             metrics = {
                 "rows_5m": len(self.df_5m),
@@ -168,6 +171,14 @@ class PipelineOrchestrator:
         except Exception as e:
             self.monitor.fail_stage("data_load", str(e))
             raise
+
+    def _load_or_download_klines(self, interval: str) -> pd.DataFrame:
+        try:
+            return load_klines(interval, self.data_dir)
+        except FileNotFoundError:
+            logger.warning("No local data for %s in %s; downloading from Binance",
+                           interval, self.data_dir)
+            return download_klines(interval, data_dir=self.data_dir)
 
     # ──────────────────────────────────────────────────────────────
     # Stage 2: Feature Engineering
@@ -614,45 +625,39 @@ class PipelineOrchestrator:
         }
 
 
-# ──────────────────────────────────────────────────────────────
-# CLI entry point: python -m src.pipeline.orchestrator [args]
-# ──────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    import argparse
-    import sys
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the BTC hybrid trader pipeline")
+    parser.add_argument("--run-name", default=None, help="Override the generated run name")
+    parser.add_argument("--config-path", default="configs/pipeline.yaml")
+    parser.add_argument("--data-dir", default="data")
+    parser.add_argument("--model-dir", default="models")
+    parser.add_argument("--output-dir", default="runs")
+    parser.add_argument("--no-resume", action="store_true",
+                        help="Start from scratch instead of resuming from a checkpoint")
+    return parser.parse_args(argv)
 
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = parse_args(argv)
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)],
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    parser = argparse.ArgumentParser(description="BTC Hybrid Trader Pipeline")
-    parser.add_argument("--run-name", default=None,
-                        help="Name for this run (default: auto-generated)")
-    parser.add_argument("--config", default="configs/pipeline.yaml",
-                        help="Path to pipeline YAML config")
-    parser.add_argument("--data-dir", default="data",
-                        help="Directory containing kline parquet files")
-    parser.add_argument("--model-dir", default="models",
-                        help="Directory for model artifacts")
-    parser.add_argument("--output-dir", default="runs",
-                        help="Directory for run outputs and monitor JSON")
-    parser.add_argument("--no-resume", action="store_true",
-                        help="Ignore any existing checkpoint and start fresh")
-    args = parser.parse_args()
-
-    orc = PipelineOrchestrator(
-        config_path=args.config,
-        data_dir=args.data_dir,
-        model_dir=args.model_dir,
-        output_dir=args.output_dir,
-        run_name=args.run_name,
-    )
     try:
-        result = orc.run(resume=not args.no_resume)
-        print(f"Pipeline completed: {result['run_name']}")
-        sys.exit(0)
-    except Exception as exc:
-        logger.error("Pipeline failed: %s", exc)
-        sys.exit(1)
+        pipeline = PipelineOrchestrator(
+            config_path=args.config_path,
+            data_dir=args.data_dir,
+            model_dir=args.model_dir,
+            output_dir=args.output_dir,
+            run_name=args.run_name,
+        )
+        pipeline.run(resume=not args.no_resume)
+        return 0
+    except Exception:
+        logger.exception("Pipeline execution failed")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
