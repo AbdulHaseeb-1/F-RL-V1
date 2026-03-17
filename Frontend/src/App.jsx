@@ -13,21 +13,32 @@ import GateResults from './components/GateResults'
 function App() {
   const [activeTab, setActiveTab] = useState('overview')
   const [backendStatus, setBackendStatus] = useState('checking')
+  const [time, setTime] = useState(() => new Date().toLocaleTimeString())
+
+  // Live clock
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Poll backend health
   const healthFetch = useCallback(() => api.health(), [])
   const { data: health } = usePolling(healthFetch, 5000)
-
   useEffect(() => {
-    if (health) setBackendStatus(health.status || health.data?.status || 'ok')
+    if (health) setBackendStatus(health.status || 'ok')
   }, [health])
 
-  // Poll pipeline progress
-  const progressFetch = useCallback(() => api.pipeline.status(), [])
-  const { data: progress } = usePolling(progressFetch, 2000)
+  // Poll pipeline status (for start/stop controls)
+  const statusFetch = useCallback(() => api.pipeline.status(), [])
+  const { data: pipelineStatus, refetch: refetchStatus } = usePolling(statusFetch, 2000)
+  const isRunning = pipelineStatus?.status === 'running'
 
-  // Poll history for fold details
-  const historyFetch = useCallback(() => api.pipeline.history(), [])
+  // Poll monitor progress (PipelineProgress component format)
+  const progressFetch = useCallback(() => api.monitor.progress(), [])
+  const { data: monitorProgress } = usePolling(progressFetch, 2000)
+
+  // Poll training history: Python monitor entries [{stage, fold, metrics, …}]
+  const historyFetch = useCallback(() => api.monitor.metrics('all'), [])
   const { data: history } = usePolling(historyFetch, 3000)
 
   // Poll backtest results
@@ -45,6 +56,16 @@ function App() {
 
   const gatesFetch = useCallback(() => api.monitor.gates(), [])
   const { data: gatesData } = usePolling(gatesFetch, 5000)
+
+  // Pipeline controls
+  const handleStart = async () => {
+    try { await api.pipeline.start() } catch (err) { console.error('Start failed:', err) }
+    refetchStatus()
+  }
+  const handleStop = async () => {
+    try { await api.pipeline.stop() } catch (err) { console.error('Stop failed:', err) }
+    refetchStatus()
+  }
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -69,11 +90,25 @@ function App() {
                 <p className="text-gray-500 text-xs">XGBoost + RL Pipeline</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <StatusBadge status={backendStatus} />
-              <div className="text-xs text-gray-500 font-mono">
-                {new Date().toLocaleTimeString()}
-              </div>
+              {/* Pipeline start / stop */}
+              {isRunning ? (
+                <button
+                  onClick={handleStop}
+                  className="px-3 py-1.5 text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
+                >
+                  Stop Pipeline
+                </button>
+              ) : (
+                <button
+                  onClick={handleStart}
+                  className="px-3 py-1.5 text-xs font-medium bg-violet-500/20 text-violet-400 border border-violet-500/30 rounded-lg hover:bg-violet-500/30 transition-colors"
+                >
+                  Start Pipeline
+                </button>
+              )}
+              <div className="text-xs text-gray-500 font-mono">{time}</div>
             </div>
           </div>
         </div>
@@ -106,20 +141,21 @@ function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'overview' && (
           <OverviewTab
-            progress={progress}
+            progress={monitorProgress}
+            pipelineStatus={pipelineStatus}
             metrics={btMetrics}
             equityData={equityData}
             gates={gatesData}
+            isRunning={isRunning}
+            onStart={handleStart}
+            onStop={handleStop}
           />
         )}
         {activeTab === 'training' && (
-          <TrainingTab history={history} progress={progress} />
+          <TrainingTab history={history} progress={monitorProgress} />
         )}
         {activeTab === 'backtest' && (
-          <BacktestTab
-            metrics={btMetrics}
-            equityData={equityData}
-          />
+          <BacktestTab metrics={btMetrics} equityData={equityData} />
         )}
         {activeTab === 'trades' && (
           <TradesTab trades={tradesData} />
@@ -132,9 +168,37 @@ function App() {
   )
 }
 
-function OverviewTab({ progress, metrics, equityData, gates }) {
+function OverviewTab({ progress, pipelineStatus, metrics, equityData, gates, isRunning, onStart, onStop }) {
   return (
     <div className="space-y-6">
+      {/* Pipeline status bar */}
+      <div className="flex items-center justify-between bg-gray-800/50 border border-gray-700/50 rounded-xl px-5 py-3">
+        <div className="flex items-center gap-3">
+          <StatusBadge status={pipelineStatus?.status || 'idle'} />
+          <span className="text-sm text-gray-400">
+            {pipelineStatus?.stage ? `Stage: ${pipelineStatus.stage}` : 'No active run'}
+          </span>
+          {pipelineStatus?.run_name && (
+            <span className="text-xs text-gray-600 font-mono">{pipelineStatus.run_name}</span>
+          )}
+        </div>
+        {isRunning ? (
+          <button
+            onClick={onStop}
+            className="px-3 py-1.5 text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
+          >
+            Stop Pipeline
+          </button>
+        ) : (
+          <button
+            onClick={onStart}
+            className="px-3 py-1.5 text-xs font-medium bg-violet-500/20 text-violet-400 border border-violet-500/30 rounded-lg hover:bg-violet-500/30 transition-colors"
+          >
+            Start Pipeline
+          </button>
+        )}
+      </div>
+
       <PipelineProgress progress={progress} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

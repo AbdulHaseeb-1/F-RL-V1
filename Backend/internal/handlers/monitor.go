@@ -25,8 +25,12 @@ func MonitorProgress(w http.ResponseWriter, r *http.Request) {
 	data, err := readTrainingHistory()
 	if err != nil {
 		// Return empty progress when no run data exists yet.
+		runName := ""
+		if run := store.GetActive(); run != nil {
+			runName = run.RunName
+		}
 		response.JSON(w, http.StatusOK, map[string]any{
-			"run_name":           "",
+			"run_name":           runName,
 			"current_stage":      stageFromActive(),
 			"stages":             map[string]any{},
 			"total_entries":      0,
@@ -106,6 +110,7 @@ func MonitorGates(w http.ResponseWriter, r *http.Request) {
 				"stage":        m["stage"],
 				"fold":         m["fold"],
 				"status":       m["status"],
+				"passed":       status == "passed",
 				"duration_sec": m["duration_sec"],
 				"timestamp":    m["timestamp"],
 			})

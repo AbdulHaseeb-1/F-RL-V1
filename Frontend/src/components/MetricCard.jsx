@@ -1,7 +1,7 @@
 export default function MetricCard({ label, value, suffix = '', trend, small = false }) {
-  const formatted = typeof value === 'number'
+  const formatted = typeof value === 'number' && Number.isFinite(value)
     ? (Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(4))
-    : value ?? '--'
+    : (value != null ? value : '--')
 
   const trendColor = trend === 'up' ? 'text-emerald-400'
     : trend === 'down' ? 'text-red-400'

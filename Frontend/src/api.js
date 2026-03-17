@@ -6,7 +6,9 @@ async function request(path, options = {}) {
     ...options,
   })
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-  return res.json()
+  const json = await res.json()
+  // Unwrap the backend envelope {success, data} → data
+  return json.data !== undefined ? json.data : json
 }
 
 export const api = {

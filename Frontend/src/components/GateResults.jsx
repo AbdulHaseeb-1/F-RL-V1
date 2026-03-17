@@ -6,7 +6,7 @@ export default function GateResults({ gates }) {
       <h2 className="text-lg font-semibold text-white mb-4">Quality Gates</h2>
       <div className="space-y-2">
         {gates.map((g, i) => {
-          const passed = g.passed
+          const passed = g.passed ?? (g.status === 'passed')
           return (
             <div key={i} className={`flex items-center justify-between px-3 py-2 rounded-lg
               ${passed ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
