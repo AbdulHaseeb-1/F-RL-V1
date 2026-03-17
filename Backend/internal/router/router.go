@@ -12,7 +12,7 @@ func New(cfg *config.Config) http.Handler {
 	mux := http.NewServeMux()
 
 	// Health
-	mux.HandleFunc("GET /health", handlers.Health)
+	mux.HandleFunc("GET /api/health", handlers.Health)
 
 	// API v1
 	mux.HandleFunc("GET /api/v1/items", handlers.ListItems)

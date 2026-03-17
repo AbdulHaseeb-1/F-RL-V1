@@ -12,7 +12,7 @@ function App() {
   useEffect(() => {
     api.health()
       .then(setHealth)
-      .catch(() => setHealth({ status: 'unreachable' }))
+      .catch(() => setHealth({ data: { status: 'unreachable' } }))
   }, [])
 
   return (

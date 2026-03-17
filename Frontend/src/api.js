@@ -10,7 +10,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  health: () => request('/health'),
+  health: () => request('/api/health'),
   items: {
     list: () => request('/api/v1/items'),
     create: (body) => request('/api/v1/items', { method: 'POST', body: JSON.stringify(body) }),
