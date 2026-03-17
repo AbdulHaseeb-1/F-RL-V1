@@ -1,0 +1,28 @@
+2026-03-17 15:34:00 [INFO] Logging to: D:\Problems\F-RL-V1\logs
+2026-03-17 15:34:00 [INFO] Run log:    D:\Problems\F-RL-V1\logs\run_20260317_153359.log
+
+=== Checking prerequisites ===
+
+2026-03-17 15:34:01 [OK] Go:     go version go1.26.1 windows/amd64
+2026-03-17 15:34:01 [OK] Node:   v22.17.1
+2026-03-17 15:34:02 [OK] Python: Python 3.14.0
+
+=== Setting up Go backend ===
+
+2026-03-17 15:34:03 [INFO] Running: go mod tidy
+2026-03-17 15:34:03 [INFO] Starting Go backend on :8080...
+2026-03-17 15:34:04 [OK] Go backend started (PID 5960) - log: D:\Problems\F-RL-V1\logs\backend_20260317_153359.log
+2026-03-17 15:34:04 [INFO] Waiting for backend to be ready...
+2026-03-17 15:34:50 [WARN] Backend health check timed out. It may still be starting.
+
+=== Setting up React frontend ===
+
+2026-03-17 15:34:51 [INFO] Starting React dev server on :5173...
+2026-03-17 15:34:52 [OK] React frontend started (PID 6392) - log: D:\Problems\F-RL-V1\logs\frontend_20260317_153359.log
+
+=== Services running ===
+
+
+=== Shutting down all services ===
+
+2026-03-17 15:36:46 [INFO] All services stopped. Logs in: D:\Problems\F-RL-V1\logs

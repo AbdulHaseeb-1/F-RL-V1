@@ -9,3 +9,5 @@ bin/
 # IDE
 .vscode/
 .idea/
+
+.gocache/
