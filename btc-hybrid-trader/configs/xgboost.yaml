@@ -1,0 +1,27 @@
+label:
+  forward_candles: 12
+  threshold_pct: 0.003
+  use_atr_threshold: false
+
+model:
+  n_estimators: 500
+  max_depth: 6
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+  min_child_weight: 5
+  gamma: 0.1
+  reg_alpha: 0.1
+  reg_lambda: 1.0
+  use_label_encoder: false
+  eval_metric: mlogloss
+  random_state: 42
+
+walk_forward:
+  train_months: 12
+  oos_months: 1
+  min_train_months: 6
+
+targets:
+  precision_min: 0.55
+  profit_factor_min: 1.3

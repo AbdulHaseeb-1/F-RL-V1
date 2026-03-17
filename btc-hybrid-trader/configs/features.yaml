@@ -1,0 +1,24 @@
+price_action:
+  return_windows: [1, 5, 15, 60]
+  atr_period: 14
+  volatility_window: 20
+
+ict_smc:
+  fvg_min_size_atr: 0.3
+  ob_lookback: 50
+  bos_swing_lookback: 20
+  liquidity_sweep_pips: 5
+
+htf_alignment:
+  ema_fast: 20
+  ema_slow: 50
+  zone_proximity_atr: 2.0
+
+order_flow:
+  cvd_window: 20
+  oi_window: 10
+
+regime:
+  vol_percentile_window: 60
+  adx_period: 14
+  volume_zscore_window: 20

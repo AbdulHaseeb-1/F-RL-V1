@@ -1,0 +1,17 @@
+xgboost>=2.0
+shap
+scikit-learn
+stable-baselines3[extra]
+gymnasium
+pandas
+numpy
+ta
+python-binance
+fastapi
+uvicorn
+optuna
+pyarrow
+pyyaml
+pytest
+requests
+python-dotenv
