@@ -9,14 +9,35 @@ import (
 )
 
 func New(cfg *config.Config) http.Handler {
+	// Propagate config to handlers that need filesystem paths.
+	handlers.InitPipeline(cfg.PythonDir)
+	handlers.InitMonitor(cfg.RunsDir)
+
 	mux := http.NewServeMux()
 
 	// Health
 	mux.HandleFunc("GET /api/health", handlers.Health)
 
-	// API v1
-	mux.HandleFunc("GET /api/v1/items", handlers.ListItems)
-	mux.HandleFunc("POST /api/v1/items", handlers.CreateItem)
+	// Pipeline
+	mux.HandleFunc("GET /api/pipeline/status", handlers.PipelineStatus)
+	mux.HandleFunc("POST /api/pipeline/start", handlers.PipelineStart)
+	mux.HandleFunc("POST /api/pipeline/stop", handlers.PipelineStop)
+	mux.HandleFunc("GET /api/pipeline/history", handlers.PipelineHistory)
+
+	// Monitor
+	mux.HandleFunc("GET /api/monitor/progress", handlers.MonitorProgress)
+	mux.HandleFunc("GET /api/monitor/metrics/{stage}", handlers.MonitorMetrics)
+	mux.HandleFunc("GET /api/monitor/gates", handlers.MonitorGates)
+
+	// Backtest
+	mux.HandleFunc("GET /api/backtest/equity", handlers.BacktestEquity)
+	mux.HandleFunc("GET /api/backtest/trades", handlers.BacktestTrades)
+	mux.HandleFunc("GET /api/backtest/metrics", handlers.BacktestMetrics)
+	mux.HandleFunc("GET /api/backtest/risk-events", handlers.BacktestRiskEvents)
+
+	// Signals
+	mux.HandleFunc("GET /api/signals/recent", handlers.SignalsRecent)
+	mux.HandleFunc("GET /api/signals/stats", handlers.SignalsStats)
 
 	// Chain middleware: recover -> logger -> cors -> mux
 	return middleware.Recover(
