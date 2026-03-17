@@ -11,8 +11,31 @@ async function request(path, options = {}) {
 
 export const api = {
   health: () => request('/api/health'),
-  items: {
-    list: () => request('/api/v1/items'),
-    create: (body) => request('/api/v1/items', { method: 'POST', body: JSON.stringify(body) }),
+
+  pipeline: {
+    status: () => request('/api/pipeline/status'),
+    start: (config) => request('/api/pipeline/start', {
+      method: 'POST', body: JSON.stringify(config || {}),
+    }),
+    stop: () => request('/api/pipeline/stop', { method: 'POST' }),
+    history: () => request('/api/pipeline/history'),
+  },
+
+  monitor: {
+    progress: () => request('/api/monitor/progress'),
+    metrics: (stage) => request(`/api/monitor/metrics/${stage || 'all'}`),
+    gates: () => request('/api/monitor/gates'),
+  },
+
+  backtest: {
+    equity: () => request('/api/backtest/equity'),
+    trades: () => request('/api/backtest/trades'),
+    metrics: () => request('/api/backtest/metrics'),
+    riskEvents: () => request('/api/backtest/risk-events'),
+  },
+
+  signals: {
+    recent: (n = 50) => request(`/api/signals/recent?n=${n}`),
+    stats: () => request('/api/signals/stats'),
   },
 }

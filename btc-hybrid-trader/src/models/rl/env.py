@@ -146,10 +146,12 @@ class BTCTradingEnv(gym.Env):
             self.entry_price = cur_price * (1 + self.slippage_rate * new_dir)
             self.capital -= open_fee * self.capital
 
-        # Funding rate cost (every funding_interval candles)
-        if self.position_dir != 0 and (self.step_idx % self.funding_interval == 0):
+        # Funding rate cost (every funding_interval candles, skip first step)
+        if (self.position_dir != 0
+                and self.step_idx > self.start_idx
+                and self.step_idx % self.funding_interval == 0):
             funding_cost = self.funding_rate * abs(self.position)
-            self.capital -= funding_cost * self.initial_capital
+            self.capital -= funding_cost * self.capital
 
         if self.position_dir != 0:
             self.time_in_position += 1
@@ -158,12 +160,20 @@ class BTCTradingEnv(gym.Env):
         self.step_idx += 1
         self.peak_capital = max(self.peak_capital, self.capital)
 
-        # Compute reward on next step
+        # Compute reward: log-return based for stability
         unrealized = self._unrealized_pnl_pct()
         drawdown = max(0.0, (self.peak_capital - self.capital) / (self.peak_capital + 1e-9))
 
-        reward = (unrealized / max(drawdown, 0.01)) \
-                 - (0.5 * max(drawdown - 0.05, 0))
+        # Reward = risk-adjusted PnL change (bounded, no division instability)
+        step_return = 0.0
+        if self.position_dir != 0 and self.step_idx > self.start_idx:
+            prev_price = self.prices[self.step_idx - 1]
+            cur_p = self.prices[self.step_idx]
+            step_return = (cur_p - prev_price) / prev_price * self.position_dir * abs(self.position)
+
+        reward = (step_return * 100.0                       # scale raw return
+                  - 0.5 * max(drawdown - 0.05, 0)           # drawdown penalty
+                  - 0.01 * (self.position_dir == 0))         # small idle penalty
 
         terminated = self.step_idx >= self.end_idx
         truncated = self.capital <= self.initial_capital * 0.5  # blown up

@@ -42,10 +42,14 @@ def add_htf_alignment(df_5m: pd.DataFrame, df_4h: pd.DataFrame,
     feat_4h = compute_htf_features(df_4h, "htf4h")
     feat_1d = compute_htf_features(df_1d, "htf1d")
 
-    # Reindex to 5m and forward fill
+    # Reindex to 5m with shift(1) to prevent lookahead:
+    # HTF candle at time T contains data up to T, so it should only
+    # be visible to 5m candles AFTER T, not during the HTF period.
     idx = df_5m.index
     for feat in [feat_4h, feat_1d]:
-        feat_reindexed = feat.reindex(idx.union(feat.index)).ffill().reindex(idx)
+        # Shift HTF features forward by 1 period to avoid lookahead
+        feat_shifted = feat.shift(1)
+        feat_reindexed = feat_shifted.reindex(idx.union(feat_shifted.index)).ffill().reindex(idx)
         for col in feat_reindexed.columns:
             df_5m[col] = feat_reindexed[col].values
 

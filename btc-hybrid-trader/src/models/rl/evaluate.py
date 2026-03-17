@@ -44,7 +44,7 @@ def run_episode(model: PPO, env: BTCTradingEnv) -> dict:
         "max_drawdown": float(max_dd),
         "final_return": float(final_return),
         "n_trades": len(env.trade_history),
-        "win_rate": env._rolling_win_rate(n=len(env.trade_history)) if env.trade_history else 0.0,
+        "win_rate": env._rolling_win_rate(n=len(env.trade_history)) if env.trade_history else float("nan"),
     }
     logger.info("RL eval: %s", {k: round(v, 4) for k, v in metrics.items()
                                 if isinstance(v, float)})

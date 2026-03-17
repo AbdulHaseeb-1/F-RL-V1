@@ -56,9 +56,10 @@ class TradeSimulator:
         for ts, sig, price, pos_size in zip(
                 signals.index, signals.values, prices.values, position_sizes.values):
 
-            # Funding rate cost
+            # Funding rate cost (on notional position value)
             if position != 0 and candle % self.funding_interval == 0 and candle > 0:
-                capital -= capital * size * self.funding_rate
+                notional = size * price
+                capital -= notional * self.funding_rate
 
             new_sig = int(sig)
             new_size = float(np.clip(pos_size, 0.0, 1.0))

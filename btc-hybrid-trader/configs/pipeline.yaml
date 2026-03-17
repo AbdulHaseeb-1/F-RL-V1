@@ -1,0 +1,50 @@
+data:
+  timeframes: ["5m", "4h", "1d"]
+  data_dir: data
+
+features:
+  config_path: configs/features.yaml
+
+xgboost:
+  config_path: configs/xgboost.yaml
+
+rl:
+  config_path: configs/rl.yaml
+  enabled: true
+
+backtest:
+  initial_capital: 10000.0
+  fee_taker: 0.0006
+  slippage: 0.0002
+  risk:
+    max_position_pct: 1.0
+    max_leverage: 3.0
+    stop_loss_pct: 0.02
+    trailing_stop_pct: 0.015
+    time_stop_candles: 96
+    max_drawdown_pct: 0.15
+    cooldown_candles: 12
+    max_daily_trades: 0
+    min_confidence: 0.55
+
+gates:
+  xgb_evaluate:
+    win_rate:
+      threshold: 0.52
+      direction: gte
+    profit_factor:
+      threshold: 1.1
+      direction: gte
+    n_trades:
+      threshold: 50
+      direction: gte
+  backtest:
+    max_drawdown:
+      threshold: 0.20
+      direction: lte
+    total_return:
+      threshold: 0.0
+      direction: gt
+    sharpe:
+      threshold: 0.5
+      direction: gte
